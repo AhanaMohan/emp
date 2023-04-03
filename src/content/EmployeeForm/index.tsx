@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { IEmployee } from '../../lib/interfaces/IEmployee';
-import EmployeeServices from '../../services/EmployeeServices';
+import axios from 'axios';
 
 const initialEmployeeState: IEmployee = {
   id:'',
@@ -29,19 +29,62 @@ const initialEmployeeState: IEmployee = {
 const EmployeeForm = () => {
   const [employees, setEmployees] = useState<IEmployee[]>([]);
   const [employee, setEmployee] = useState<IEmployee>(initialEmployeeState);
-  const empServices = new EmployeeServices();
-  // const apiUrl = 'https://mysaleappcompanyapi-7lfpakcp7q-el.a.run.app/api/Employees';
-  // axios.get(apiUrl)
-  //    .then(response => setEmployees(response.data.data))
-  //    .catch(error => console.log(error));
 
-  empServices.getEmployees()
-  .then(response => setEmployees(response))
-     .catch(error => console.log(error));
+  axios.defaults.headers["dbName"] = "mysaledb33011114564";
+  axios.defaults.headers["Content-Type"] = "application/json";
+  axios.defaults.headers["Access-Control-Allow-Origin"] = "*";
+
+  const apiUrl = 'https://mysaleappcompanyapi-7lfpakcp7q-el.a.run.app/api/Employees';
+
+  useEffect(() => {
+    axios.get(apiUrl)
+      .then(response => setEmployees(response.data.data))
+      .catch(error => console.log(error));
+      console.log(employees);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setEmployee({ ...employee, [name]: value });
+    setEmployee((prevData) => ({
+    ...prevData,
+    [name]: value,
+    }));
+  };
+
+  const addEmployee = async (employee:IEmployee) => {
+    try {
+      await axios.post(apiUrl, employee);
+      setEmployee(initialEmployeeState);
+      alert('Data added successfully!');
+    } 
+    catch (error) {
+        console.error(error);
+        alert('Failed to add data');
+    }
+  };
+
+  const updateEmployee = async () => {
+    try {
+        await axios.put(`${apiUrl}`, employee);
+        setEmployee(initialEmployeeState);
+        alert('Data updated successfully!');
+    }
+    catch (error) {
+        console.error(error);
+        alert('Failed to update data');
+    }
+  };
+
+  const deleteEmployee = async (id: string) => {
+    try {
+      await axios.delete(`${apiUrl}/${id}`);
+      setEmployees(employees.filter(e => e.id !== id));
+      console.log("Deleted!");
+    } 
+    
+    catch (error) {
+      console.error('Error deleting employee', error);
+    }
   };
 
   const handleUpdate = (id: string) => {
@@ -53,26 +96,24 @@ const EmployeeForm = () => {
   
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this employee?')) {
-      empServices.deleteEmployee(id);
+      await deleteEmployee(id);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (employee.id === '') {
-      await empServices.addEmployee(employee);
-      alert('Data added successfully!');
-    } 
-    else {
-      await empServices.updateEmployee(employee);
-      alert('Data updated successfully!');
-    }
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+     if (employee.id) {
+       updateEmployee();
+     } else {
+      addEmployee(employee);
+     }
     setEmployee(initialEmployeeState);
   };
 
   const handleCancel = () => {
     setEmployee(initialEmployeeState);
   };
+
 
   return (
     <div>
